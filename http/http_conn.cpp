@@ -4,18 +4,18 @@
 #include "http_conn.h"
 
 //定义http响应的一些状态信息
-const char* ok_200_title = "OK";
-const char* error_400_title = "Bad Request";
-const char* error_400_form = "Your request has bad syntax or is inherently impossible to staisfy.\n";
-const char* error_403_title = "Forbidden";
-const char* error_403_form = "You do not have permission to get file form this server.\n";
-const char* error_404_title = "Not Found";
-const char* error_404_form = "The requested file was not found on this server.\n";
-const char* error_500_title = "Internal Error";
-const char* error_500_form = "There was an unusual problem serving the request file.\n";
+const char *ok_200_title = "OK";
+const char *error_400_title = "Bad Request";
+const char *error_400_form = "Your request has bad syntax or is inherently impossible to staisfy.\n";
+const char *error_403_title = "Forbidden";
+const char *error_403_form = "You do not have permission to get file form this server.\n";
+const char *error_404_title = "Not Found";
+const char *error_404_form = "The requested file was not found on this server.\n";
+const char *error_500_title = "Internal Error";
+const char *error_500_form = "There was an unusual problem serving the request file.\n";
 
 // 当浏览器出现连接重置时，可能是网站根目录出错或 http 响应格式出错或者访问的文件中内容完全为空
-const char* doc_root = "/home/xsakura/project/molecule-01/root";
+const char *doc_root = "/home/xsakura/project/molecule-01/root";
 
 int HttpConn::m_epollfd = -1;       // 所有的 socket 上的事件都被注册同一个 epoll 对象
 int HttpConn::m_user_count = 0;     // 统计用户的数量
@@ -87,7 +87,7 @@ void HttpConn::init() {
 }
 
 // 初始化连接，外部调用初始化套接字地址
-void HttpConn::init(int sockfd, const sockaddr_in& address) {
+void HttpConn::init(int sockfd, const sockaddr_in &address) {
     m_sockfd = sockfd;
     m_address = address;
 
@@ -142,6 +142,8 @@ bool HttpConn::read() {
 bool HttpConn::write() {
     // printf("写入数据功能正在实现...\n");
     int temp = 0;
+
+    printf("%d %s\n", m_sockfd, m_url);
 
     if (bytes_to_send == 0) {
         // 要发送的字节为 0，这一次响应结束
@@ -239,7 +241,7 @@ HttpConn::HTTP_CODE HttpConn::do_request() {
     // 以只读方式打开文件
     int fd = open(m_real_file, O_RDONLY);
     // 创建内存映射
-    m_file_address = (char*)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    m_file_address = (char *)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
     return FILE_REQUEST;
 }
@@ -283,14 +285,14 @@ HttpConn::LINE_STATUS HttpConn::parse_line() {
 }
 
 // 解析 http 请求行，获得请求方法，目标 url 及 http 版本号
-HttpConn::HTTP_CODE HttpConn::parse_request_line(char* text) {
+HttpConn::HTTP_CODE HttpConn::parse_request_line(char *text) {
     // strpbrk：返回 accept 串中任一字符在 s 串中最先出现的位置
     m_url = strpbrk(text, " \t");
     if (!m_url) {
         return BAD_REQUEST;
     }
     *m_url++ = '\0';
-    char* method = text;
+    char *method = text;
     if (strcasecmp(method, "GET") == 0) {
         m_method = GET;
     }
@@ -339,7 +341,7 @@ HttpConn::HTTP_CODE HttpConn::parse_request_line(char* text) {
 }
 
 // 解析 http 请求的头部信息
-HttpConn::HTTP_CODE HttpConn::parse_headers(char* text) {
+HttpConn::HTTP_CODE HttpConn::parse_headers(char *text) {
     // 遇到空行，表示头部信息读取完毕
     if (text[0] == '\0') {
         // 如果 http 请求有消息体，则需要读取 m_content_length 字节长度的消息体
@@ -378,7 +380,7 @@ HttpConn::HTTP_CODE HttpConn::parse_headers(char* text) {
 }
 
 // 判断 http 请求是否被完整读入
-HttpConn::HTTP_CODE HttpConn::parse_content(char* text) {
+HttpConn::HTTP_CODE HttpConn::parse_content(char *text) {
     if (m_read_idx >= (m_content_length + m_checked_idx)) {
         text[m_content_length] = '\0';
         m_string = text;
@@ -392,7 +394,7 @@ HttpConn::HTTP_CODE HttpConn::process_read() {
     LINE_STATUS line_status = LINE_OK;
     HTTP_CODE ret = NO_REQUEST;
 
-    char* text = 0;
+    char *text = 0;
 
     while ((m_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) || ((line_status = parse_line()) == LINE_OK)) {
         // 1. 解析一行完整的数据
@@ -401,36 +403,36 @@ HttpConn::HTTP_CODE HttpConn::process_read() {
         m_start_line = m_checked_idx;
 
         switch (m_check_state) {
-        case CHECK_STATE_REQUESTLINE:
-        {
-            ret = parse_request_line(text);
-            if (ret == BAD_REQUEST) {
-                return BAD_REQUEST;
+            case CHECK_STATE_REQUESTLINE:
+            {
+                ret = parse_request_line(text);
+                if (ret == BAD_REQUEST) {
+                    return BAD_REQUEST;
+                }
+                break;
             }
-            break;
-        }
-        case CHECK_STATE_HEADER:
-        {
-            ret = parse_headers(text);
-            if (ret == BAD_REQUEST) {
-                return BAD_REQUEST;
+            case CHECK_STATE_HEADER:
+            {
+                ret = parse_headers(text);
+                if (ret == BAD_REQUEST) {
+                    return BAD_REQUEST;
+                }
+                else if (ret == GET_REQUEST) {
+                    return do_request();
+                }
+                break;
             }
-            else if (ret == GET_REQUEST) {
-                return do_request();
+            case CHECK_STATE_CONTENT:
+            {
+                ret = parse_content(text);
+                if (ret == GET_REQUEST)
+                    return do_request();
+                line_status = LINE_OPEN;
+                break;
             }
-            break;
-        }
-        case CHECK_STATE_CONTENT:
-        {
-            ret = parse_content(text);
-            if (ret == GET_REQUEST)
-                return do_request();
-            line_status = LINE_OPEN;
-            break;
-        }
 
-        default:
-            return INTERNAL_ERROR;
+            default:
+                return INTERNAL_ERROR;
         }
     }
 
@@ -442,7 +444,7 @@ HttpConn::HTTP_CODE HttpConn::process_read() {
 // ---------- 一系列生成相应响应报文的函数 ----------
 
 // 将响应内容写入写缓冲区中
-bool HttpConn::add_response(const char* format, ...) {
+bool HttpConn::add_response(const char *format, ...) {
     if (m_write_idx >= WRITE_BUFFER_SIZE) return false;
     va_list arg_list;   // 指针类型，指向参数列表中的参数
     va_start(arg_list, format); // 指向第一个参数
@@ -459,7 +461,7 @@ bool HttpConn::add_response(const char* format, ...) {
 }
 
 // 生成响应行
-bool HttpConn::add_status_line(int status, const char* title) {
+bool HttpConn::add_status_line(int status, const char *title) {
     return add_response("%s %d %s\r\n", "HTTP/1.1", status, title);
 }
 
@@ -488,7 +490,7 @@ bool HttpConn::add_headers(int content_length) {
 }
 
 // 生成响应内容
-bool HttpConn::add_content(const char* content) {
+bool HttpConn::add_content(const char *content) {
     return add_response("%s", content);
 }
 
@@ -496,55 +498,55 @@ bool HttpConn::add_content(const char* content) {
 bool HttpConn::process_write(HTTP_CODE ret) {
 
     switch (ret) {
-    case INTERNAL_ERROR:
-    {
-        add_status_line(500, error_500_title);
-        add_headers(strlen(error_500_form));
-        if (!add_content(error_500_form)) {
-            return false;
-        }
-        break;
-    }
-    // 针对没资源和请求错误
-    case BAD_REQUEST: case NO_RESOURCE:
-    {
-        add_status_line(404, error_404_title);
-        add_headers(strlen(error_404_form));
-        if (!add_content(error_404_form)) {
-            return false;
-        }
-        break;
-    }
-    case FORBIDDEN_REQUEST:
-    {
-        add_status_line(403, error_403_title);
-        add_headers(strlen(error_403_form));
-        if (!add_content(error_403_form)) {
-            return false;
-        }
-        break;
-    }
-    case FILE_REQUEST: {
-        add_status_line(200, ok_200_title);
-        if (m_file_stat.st_size != 0) {
-            add_headers(m_file_stat.st_size);
-            m_iv[0].iov_base = m_write_buf;
-            m_iv[0].iov_len = m_write_idx;
-            m_iv[1].iov_base = m_file_address;
-            m_iv[1].iov_len = m_file_stat.st_size;
-            m_iv_count = 2;
-            bytes_to_send = m_write_idx + m_file_stat.st_size;
-            return true;
-        }
-        else {
-            const char* ok_string = "<html><body></body></html>";
-            add_headers(strlen(ok_string));
-            if (!add_content(ok_string))
+        case INTERNAL_ERROR:
+        {
+            add_status_line(500, error_500_title);
+            add_headers(strlen(error_500_form));
+            if (!add_content(error_500_form)) {
                 return false;
+            }
+            break;
         }
-    }
-    default:
-        return false;
+        // 针对没资源和请求错误
+        case BAD_REQUEST: case NO_RESOURCE:
+        {
+            add_status_line(404, error_404_title);
+            add_headers(strlen(error_404_form));
+            if (!add_content(error_404_form)) {
+                return false;
+            }
+            break;
+        }
+        case FORBIDDEN_REQUEST:
+        {
+            add_status_line(403, error_403_title);
+            add_headers(strlen(error_403_form));
+            if (!add_content(error_403_form)) {
+                return false;
+            }
+            break;
+        }
+        case FILE_REQUEST: {
+            add_status_line(200, ok_200_title);
+            if (m_file_stat.st_size != 0) {
+                add_headers(m_file_stat.st_size);
+                m_iv[0].iov_base = m_write_buf;
+                m_iv[0].iov_len = m_write_idx;
+                m_iv[1].iov_base = m_file_address;
+                m_iv[1].iov_len = m_file_stat.st_size;
+                m_iv_count = 2;
+                bytes_to_send = m_write_idx + m_file_stat.st_size;
+                return true;
+            }
+            else {
+                const char *ok_string = "<html><body></body></html>";
+                add_headers(strlen(ok_string));
+                if (!add_content(ok_string))
+                    return false;
+            }
+        }
+        default:
+            return false;
     }
 
     m_iv[0].iov_base = m_write_buf;

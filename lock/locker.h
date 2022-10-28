@@ -56,7 +56,7 @@ public:
         return pthread_mutex_unlock(&m_mutex) == 0;
     }
     // 获取互斥锁
-    pthread_mutex_t* get() {
+    pthread_mutex_t *get() {
         return &m_mutex;
     }
 private:
@@ -76,7 +76,7 @@ public:
         pthread_cond_destroy(&m_cond);
     }
     //等待条件变量
-    bool wait(pthread_mutex_t* mutex) {
+    bool wait(pthread_mutex_t *mutex) {
         int ret = 0;
         // 阻塞的时候，互斥锁会进行解锁
         // 当不阻塞的时候，会恢复互斥锁为加锁状态
@@ -85,7 +85,7 @@ public:
         // pthread_mutex_unlock(&mutex);
         return ret == 0;
     }
-    bool timewait(pthread_mutex_t* mutex, struct timespec t) {
+    bool timewait(pthread_mutex_t *mutex, struct timespec t) {
         int ret = 0;
         // pthread_mutex_lock(&mutex);
         ret = pthread_cond_timedwait(&m_cond, mutex, &t);
