@@ -1,6 +1,4 @@
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
+
 #include "http_conn.h"
 
 //定义http响应的一些状态信息
@@ -19,6 +17,7 @@ const char *doc_root = "/home/xsakura/project/molecule-01/root";
 
 int HttpConn::m_epollfd = -1;       // 所有的 socket 上的事件都被注册同一个 epoll 对象
 int HttpConn::m_user_count = 0;     // 统计用户的数量
+
 
 // ---------- 一系列操作文件描述符的操作 ----------
 
@@ -56,7 +55,6 @@ void modfd(int epollfd, int fd, int ev) {
     event.events = ev | EPOLLONESHOT | EPOLLRDHUP;
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
-
 
 
 // ---------- http 请求的基本操作函数 ----------
@@ -132,8 +130,8 @@ bool HttpConn::read() {
         return false;
     }
 
-    printf("读取到了数据\n");
-    printf("%s", m_read_buf);
+    // printf("读取到了数据\n");
+    // printf("%s", m_read_buf);
 
     return true;
 }
@@ -143,7 +141,7 @@ bool HttpConn::write() {
     // printf("写入数据功能正在实现...\n");
     int temp = 0;
 
-    printf("%d %s\n", m_sockfd, m_url);
+    // printf("%d %s\n", m_sockfd, m_url);
 
     if (bytes_to_send == 0) {
         // 要发送的字节为 0，这一次响应结束
@@ -374,7 +372,7 @@ HttpConn::HTTP_CODE HttpConn::parse_headers(char *text) {
     }
     else {
         // 无法解析首部字段名
-        printf("oop!unknow header: %s\n", text);
+        // printf("oop!unknow header: %s\n", text);
     }
     return NO_REQUEST;
 }
@@ -455,8 +453,8 @@ bool HttpConn::add_response(const char *format, ...) {
     }
     m_write_idx += len;
     va_end(arg_list); // 回收指针
-    printf("回复\n");
-    printf("%s", m_write_buf);
+    // printf("回复\n");
+    // printf("%s", m_write_buf);
     return true;
 }
 
